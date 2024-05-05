@@ -23,7 +23,8 @@ command /dispatchmeasynceffect:
 ```
 
 ## Special thanks:
-- **nanodn**: Initial work
+- **Tlatoani**: Creator of MundoSK
+- **nanodn**: Forking MundoSK as MundoSK-Async
 - **TPGamesNL**: Skript 2.6+ compatibility
 
 ## Self-build:
