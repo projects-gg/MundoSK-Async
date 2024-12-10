@@ -1,4 +1,6 @@
 # MundoSK-Async
+[![CodeFactor](https://www.codefactor.io/repository/github/projects-gg/mundosk-async/badge)](https://www.codefactor.io/repository/github/projects-gg/mundosk-async)
+
 Revisited version of MundoSK's async feature for the modern Skript versions.
 
 ## Examples of usage:
@@ -23,7 +25,8 @@ command /dispatchmeasynceffect:
 ```
 
 ## Special thanks:
-- **nanodn**: Initial work
+- **Tlatoani**: Creator of MundoSK
+- **nanodn**: Forking MundoSK as MundoSK-Async
 - **TPGamesNL**: Skript 2.6+ compatibility
 
 ## Self-build:
