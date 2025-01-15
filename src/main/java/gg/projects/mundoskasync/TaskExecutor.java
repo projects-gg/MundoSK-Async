@@ -1,27 +1,30 @@
 package gg.projects.mundoskasync;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.*;
 
 public class TaskExecutor {
-    private static final ExecutorService asyncExecutor = Executors.newFixedThreadPool(
-            Runtime.getRuntime().availableProcessors(), new CustomThreadFactory("MundoSK-Async")
+    private static final ExecutorService asyncExecutor = new ThreadPoolExecutor(
+            Runtime.getRuntime().availableProcessors(),
+            Runtime.getRuntime().availableProcessors() * 2,
+            60L, TimeUnit.SECONDS,
+            new ArrayBlockingQueue<>(100),
+            new CustomThreadFactory("MundoSK-Async")
     );
 
     public static void executeAsync(Runnable runnable) {
-        asyncExecutor.execute(() -> {
-            try {
-                runnable.run();
-            } catch (Exception e) {
-                MundoSKAsync.getInstance().getLogger().severe("Error in async task: " + e.getMessage());
-                e.printStackTrace();
-            }
-        });
+        asyncExecutor.execute(runnable);
     }
 
     public static void shutdown() {
-        asyncExecutor.shutdownNow();
+        asyncExecutor.shutdown();
+        try {
+            if (!asyncExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+                asyncExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            asyncExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
     private static class CustomThreadFactory implements ThreadFactory {

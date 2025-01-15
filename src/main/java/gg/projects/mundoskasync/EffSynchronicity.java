@@ -1,16 +1,12 @@
 package gg.projects.mundoskasync;
 
 import ch.njol.skript.Skript;
-import ch.njol.skript.effects.Delay;
 import ch.njol.skript.lang.Effect;
 import ch.njol.skript.lang.Expression;
-import ch.njol.skript.lang.SkriptParser.ParseResult;
+import ch.njol.skript.lang.SkriptParser;
 import ch.njol.skript.lang.TriggerItem;
-import ch.njol.skript.variables.Variables;
 import ch.njol.util.Kleenean;
 import org.bukkit.event.Event;
-
-import java.util.logging.Level;
 
 public class EffSynchronicity extends Effect {
 
@@ -21,10 +17,8 @@ public class EffSynchronicity extends Effect {
     private boolean isSync;
 
     @Override
-    public boolean init(Expression<?>[] exprs, int matchedPattern, Kleenean isDelayed, ParseResult parseResult) {
+    public boolean init(Expression<?>[] exprs, int matchedPattern, Kleenean isDelayed, SkriptParser.ParseResult parseResult) {
         isSync = matchedPattern == 1;
-
-        getParser().setHasDelayBefore(Kleenean.TRUE);
         return true;
     }
 
@@ -33,38 +27,23 @@ public class EffSynchronicity extends Effect {
 
     @Override
     public TriggerItem walk(Event e) {
-        debug(e, true);
-
-        Object localVars = Variables.removeLocals(e);
-        Delay.addDelayedEvent(e);
-
-        Runnable runnable = () -> {
-            try {
-                if (localVars != null)
-                    Variables.setLocalVariables(e, localVars);
-
-                TriggerItem next = getNext();
-                if (next != null)
-                    walk(next, e);
-            } catch (Exception ex) {
-                MundoSKAsync.getInstance().getLogger().log(Level.SEVERE, "Error in synchronicity task", ex);
-            } finally {
-                Variables.removeLocals(e);
+        Runnable task = () -> {
+            TriggerItem next = getNext();
+            if (next != null) {
+                walk(next, e);
             }
         };
 
-        if (isSync)
-            Scheduling.sync(runnable);
-        else
-            Scheduling.async(runnable);
-
+        if (isSync) {
+            Scheduling.sync(task);
+        } else {
+            Scheduling.async(task);
+        }
         return null;
     }
-
 
     @Override
     public String toString(Event e, boolean debug) {
         return isSync ? "sync" : "async";
     }
-
 }
