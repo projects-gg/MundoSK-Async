@@ -11,6 +11,8 @@ import ch.njol.skript.variables.Variables;
 import ch.njol.util.Kleenean;
 import org.bukkit.event.Event;
 
+import java.util.logging.Level;
+
 public class EffWaitAsync extends Effect {
 
     static {
@@ -42,17 +44,22 @@ public class EffWaitAsync extends Effect {
             return null;
 
         Scheduling.asyncDelay((int) delay.getTicks_i(), () -> {
-            if (localVars != null)
-                Variables.setLocalVariables(e, localVars);
+            try {
+                if (localVars != null)
+                    Variables.setLocalVariables(e, localVars);
 
-            TriggerItem next = getNext();
-            if (next != null)
-                walk(getNext(), e);
-
-            Variables.removeLocals(e);
+                TriggerItem next = getNext();
+                if (next != null)
+                    walk(next, e);
+            } catch (Exception ex) {
+                MundoSKAsync.getInstance().getLogger().log(Level.SEVERE, "Error in async wait task", ex);
+            } finally {
+                Variables.removeLocals(e);
+            }
         });
         return null;
     }
+
 
     @Override
     public String toString(Event e, boolean debug) {

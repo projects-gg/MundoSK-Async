@@ -10,6 +10,8 @@ import ch.njol.skript.variables.Variables;
 import ch.njol.util.Kleenean;
 import org.bukkit.event.Event;
 
+import java.util.logging.Level;
+
 public class EffSynchronicity extends Effect {
 
     static {
@@ -37,14 +39,18 @@ public class EffSynchronicity extends Effect {
         Delay.addDelayedEvent(e);
 
         Runnable runnable = () -> {
-            if (localVars != null)
-                Variables.setLocalVariables(e, localVars);
+            try {
+                if (localVars != null)
+                    Variables.setLocalVariables(e, localVars);
 
-            TriggerItem next = getNext();
-            if (next != null)
-                walk(getNext(), e);
-
-            Variables.removeLocals(e);
+                TriggerItem next = getNext();
+                if (next != null)
+                    walk(next, e);
+            } catch (Exception ex) {
+                MundoSKAsync.getInstance().getLogger().log(Level.SEVERE, "Error in synchronicity task", ex);
+            } finally {
+                Variables.removeLocals(e);
+            }
         };
 
         if (isSync)
@@ -54,6 +60,7 @@ public class EffSynchronicity extends Effect {
 
         return null;
     }
+
 
     @Override
     public String toString(Event e, boolean debug) {
