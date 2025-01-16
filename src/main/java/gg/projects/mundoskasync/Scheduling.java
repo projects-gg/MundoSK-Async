@@ -12,8 +12,9 @@ public class Scheduling {
     }
 
     public static void async(Runnable runnable) {
-        //scheduler.runTaskAsynchronously(MundoSKAsync.getInstance(), runnable);
-        TaskExecutor.executeAsync(runnable);
+        scheduler.runTaskAsynchronously(MundoSKAsync.getInstance(), runnable);
+        //TaskExecutor.executeAsync(runnable);
+        // ^ This causes to remove local variables early even not with async calls. idk why
     }
 
     public static void syncDelay(long ticks, Runnable runnable) {

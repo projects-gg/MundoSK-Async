@@ -54,9 +54,9 @@ public class EffWaitAsync extends Effect {
         return null;
     }
 
-
     @Override
     public String toString(Event e, boolean debug) {
         return "async wait " + delay.toString(e, debug);
     }
+
 }
