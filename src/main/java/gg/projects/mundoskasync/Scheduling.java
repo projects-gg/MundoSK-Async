@@ -3,8 +3,6 @@ package gg.projects.mundoskasync;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitScheduler;
 
-import java.util.logging.Level;
-
 public class Scheduling {
 
     private static final BukkitScheduler scheduler = Bukkit.getScheduler();
@@ -14,6 +12,7 @@ public class Scheduling {
     }
 
     public static void async(Runnable runnable) {
+        //scheduler.runTaskAsynchronously(MundoSKAsync.getInstance(), runnable);
         TaskExecutor.executeAsync(runnable);
     }
 
@@ -24,4 +23,5 @@ public class Scheduling {
     public static void asyncDelay(long ticks, Runnable runnable) {
         scheduler.runTaskLaterAsynchronously(MundoSKAsync.getInstance(), runnable, ticks);
     }
+
 }

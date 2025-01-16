@@ -1,10 +1,12 @@
 package gg.projects.mundoskasync;
 
 import ch.njol.skript.Skript;
+import ch.njol.skript.effects.Delay;
 import ch.njol.skript.lang.Effect;
 import ch.njol.skript.lang.Expression;
-import ch.njol.skript.lang.SkriptParser;
+import ch.njol.skript.lang.SkriptParser.ParseResult;
 import ch.njol.skript.lang.TriggerItem;
+import ch.njol.skript.variables.Variables;
 import ch.njol.util.Kleenean;
 import org.bukkit.event.Event;
 
@@ -17,8 +19,10 @@ public class EffSynchronicity extends Effect {
     private boolean isSync;
 
     @Override
-    public boolean init(Expression<?>[] exprs, int matchedPattern, Kleenean isDelayed, SkriptParser.ParseResult parseResult) {
+    public boolean init(Expression<?>[] exprs, int matchedPattern, Kleenean isDelayed, ParseResult parseResult) {
         isSync = matchedPattern == 1;
+
+        getParser().setHasDelayBefore(Kleenean.TRUE);
         return true;
     }
 
@@ -27,18 +31,27 @@ public class EffSynchronicity extends Effect {
 
     @Override
     public TriggerItem walk(Event e) {
-        Runnable task = () -> {
+        debug(e, true);
+
+        Object localVars = Variables.removeLocals(e);
+        Delay.addDelayedEvent(e);
+
+        Runnable runnable = () -> {
+            if (localVars != null)
+                Variables.setLocalVariables(e, localVars);
+
             TriggerItem next = getNext();
-            if (next != null) {
-                walk(next, e);
-            }
+            if (next != null)
+                walk(getNext(), e);
+
+            Variables.removeLocals(e);
         };
 
-        if (isSync) {
-            Scheduling.sync(task);
-        } else {
-            Scheduling.async(task);
-        }
+        if (isSync)
+            Scheduling.sync(runnable);
+        else
+            Scheduling.async(runnable);
+
         return null;
     }
 
@@ -46,4 +59,5 @@ public class EffSynchronicity extends Effect {
     public String toString(Event e, boolean debug) {
         return isSync ? "sync" : "async";
     }
+
 }

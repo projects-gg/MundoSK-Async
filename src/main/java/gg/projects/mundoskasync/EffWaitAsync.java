@@ -9,10 +9,7 @@ import ch.njol.skript.lang.TriggerItem;
 import ch.njol.skript.util.Timespan;
 import ch.njol.skript.variables.Variables;
 import ch.njol.util.Kleenean;
-import org.bukkit.Bukkit;
 import org.bukkit.event.Event;
-
-import java.util.logging.Level;
 
 public class EffWaitAsync extends Effect {
 
@@ -41,26 +38,19 @@ public class EffWaitAsync extends Effect {
         Object localVars = Variables.removeLocals(e);
 
         Timespan delay = this.delay.getSingle(e);
-        if (delay == null) {
+        if (delay == null)
             return null;
-        }
 
-        Bukkit.getScheduler().runTaskLater(MundoSKAsync.getInstance(), () -> {
-            try {
-                if (localVars != null) {
-                    Variables.setLocalVariables(e, localVars);
-                }
-                TriggerItem next = getNext();
-                if (next != null) {
-                    walk(next, e);
-                }
-            } catch (Exception ex) {
-                MundoSKAsync.getInstance().getLogger().severe("Error in async wait continuation: " + ex.getMessage());
-            } finally {
-                Variables.removeLocals(e);
-            }
-        }, delay.getTicks_i());
+        Scheduling.asyncDelay((int) delay.getTicks_i(), () -> {
+            if (localVars != null)
+                Variables.setLocalVariables(e, localVars);
 
+            TriggerItem next = getNext();
+            if (next != null)
+                walk(getNext(), e);
+
+            Variables.removeLocals(e);
+        });
         return null;
     }
 
