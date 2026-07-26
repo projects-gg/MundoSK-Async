@@ -2,23 +2,32 @@ plugins {
     id 'java'
 }
 
-group 'gg.projects'
-version '0.1.5'
+group = 'gg.projects'
+version = '0.1.5'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
 
 repositories {
     mavenCentral()
     maven {
-        url 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+        url = uri('https://hub.spigotmc.org/nexus/content/repositories/snapshots/')
     }
     maven {
-        url 'https://jitpack.io'
+        url = uri('https://jitpack.io')
     }
     maven {
-        url 'https://repo.skriptlang.org/releases'
+        url = uri('https://repo.skriptlang.org/releases')
     }
 }
 
 dependencies {
-    implementation 'org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT'
-    implementation 'com.github.SkriptLang:Skript:2.10.1'
+    compileOnly 'org.spigotmc:spigot-api:1.21.1-R0.1-SNAPSHOT'
+    compileOnly 'com.github.SkriptLang:Skript:2.10.1'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
 }

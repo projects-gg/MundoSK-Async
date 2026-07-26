@@ -44,12 +44,15 @@ public class SecSynchronicity extends Section {
         List<TriggerSection> previousSections = parser.getCurrentSections();
         Kleenean previousDelay = parser.getHasDelayBefore();
 
-        parser.setCurrentSections(new ArrayList<>());
-        parser.setHasDelayBefore(Kleenean.FALSE);
-        List<TriggerItem> triggerItems = ScriptLoader.loadItems(sectionNode);
-
-        parser.setCurrentSections(previousSections);
-        parser.setHasDelayBefore(previousDelay);
+        List<TriggerItem> triggerItems;
+        try {
+            parser.setCurrentSections(new ArrayList<>());
+            parser.setHasDelayBefore(Kleenean.FALSE);
+            triggerItems = ScriptLoader.loadItems(sectionNode);
+        } finally {
+            parser.setCurrentSections(previousSections);
+            parser.setHasDelayBefore(previousDelay);
+        }
 
         Script script = parser.getCurrentScript();
 
@@ -60,23 +63,23 @@ public class SecSynchronicity extends Section {
 
     @Override
     protected TriggerItem walk(Event e) {
-        Runnable runnable = () -> trigger.execute(e);
-
-        if (this.delay == null) {
-            if (isSync)
-                Scheduling.sync(runnable);
-            else
-                Scheduling.async(runnable);
-        } else {
-            Timespan delay = this.delay.getSingle(e);
-            if (delay == null)
+        Timespan delayTime = null;
+        if (delay != null) {
+            delayTime = delay.getSingle(e);
+            if (delayTime == null) {
                 return null;
-            long ticks = delay.getTicks();
+            }
+        }
 
-            if (isSync)
-                Scheduling.syncDelay(ticks, runnable);
-            else
-                Scheduling.asyncDelay(ticks, runnable);
+        if (delayTime == null) {
+            ScriptContinuation.forkCopied(e, isSync, 0L, () -> trigger.execute(e));
+        } else {
+            ScriptContinuation.forkCopied(
+                e,
+                isSync,
+                ScriptContinuation.ticks(delayTime),
+                () -> trigger.execute(e)
+            );
         }
 
         return super.walk(e, false);
@@ -84,7 +87,8 @@ public class SecSynchronicity extends Section {
 
     @Override
     public String toString(Event e, boolean debug) {
-        return isSync ? "sync" : "async" + (delay == null ? "" : " " + delay.toString(e, debug));
+        String mode = isSync ? "sync" : "async";
+        return mode + (delay == null ? "" : " in " + delay.toString(e, debug));
     }
 
 }

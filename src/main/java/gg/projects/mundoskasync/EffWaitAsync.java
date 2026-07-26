@@ -1,13 +1,11 @@
 package gg.projects.mundoskasync;
 
 import ch.njol.skript.Skript;
-import ch.njol.skript.effects.Delay;
 import ch.njol.skript.lang.Effect;
 import ch.njol.skript.lang.Expression;
 import ch.njol.skript.lang.SkriptParser.ParseResult;
 import ch.njol.skript.lang.TriggerItem;
 import ch.njol.skript.util.Timespan;
-import ch.njol.skript.variables.Variables;
 import ch.njol.util.Kleenean;
 import org.bukkit.event.Event;
 
@@ -34,23 +32,19 @@ public class EffWaitAsync extends Effect {
     public TriggerItem walk(Event e) {
         debug(e, true);
 
-        Delay.addDelayedEvent(e);
-        Object localVars = Variables.removeLocals(e);
-
-        Timespan delay = this.delay.getSingle(e);
-        if (delay == null)
+        Timespan delayTime = this.delay.getSingle(e);
+        if (delayTime == null) {
             return null;
+        }
 
-        Scheduling.asyncDelay((int) delay.getTicks_i(), () -> {
-            if (localVars != null)
-                Variables.setLocalVariables(e, localVars);
+        TriggerItem next = getNext();
+        ScriptContinuation.continueDetached(
+            e,
+            false,
+            ScriptContinuation.ticks(delayTime),
+            next == null ? null : () -> walk(next, e)
+        );
 
-            TriggerItem next = getNext();
-            if (next != null)
-                walk(getNext(), e);
-
-            Variables.removeLocals(e);
-        });
         return null;
     }
 
