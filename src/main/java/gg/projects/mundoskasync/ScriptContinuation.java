@@ -24,6 +24,11 @@ final class ScriptContinuation {
             localVariables.restore();
             throw ex;
         }
+
+        // The continuation is scheduled for certain, so the local variable slot of this event now
+        // belongs to it. An enclosing continuation scope on this thread must not clean the slot up
+        // any more: the new continuation may already be running and have installed its variables.
+        SkriptLocalVariables.markHandedOff(event);
     }
 
     static void forkCopied(Event event, boolean sync, long delayTicks, Runnable body) {

@@ -175,7 +175,7 @@ public final class TaskExecutor {
 
     private static ThreadPoolExecutor createExecutor() {
         ScalingQueue queue = new ScalingQueue(QUEUE_CAPACITY);
-        ThreadPoolExecutor executor = new AsyncPool(
+        AsyncPool executor = new AsyncPool(
             CORE_POOL_SIZE,
             MAX_POOL_SIZE,
             KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
@@ -203,15 +203,44 @@ public final class TaskExecutor {
      */
     private static final class AsyncPool extends ThreadPoolExecutor {
 
+        /**
+         * Tasks accepted by {@link #execute} that have not finished yet. {@link ScalingQueue}
+         * compares this against the pool size to decide whether an idle worker exists; unlike
+         * {@link #getActiveCount()}, which takes the pool's main lock and walks every worker,
+         * reading it is a single volatile load on the submit hot path.
+         */
+        private final AtomicInteger submittedCount = new AtomicInteger();
+
         AsyncPool(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit,
                   LinkedBlockingQueue<Runnable> workQueue, ThreadFactory threadFactory,
                   RejectedExecutionHandler handler) {
             super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory, handler);
         }
 
+        int getSubmittedCount() {
+            return submittedCount.get();
+        }
+
+        /** Balances {@link #execute} for a rejected task that will not run on a pool worker. */
+        void taskRejected() {
+            submittedCount.decrementAndGet();
+        }
+
+        @Override
+        public void execute(Runnable command) {
+            submittedCount.incrementAndGet();
+            try {
+                super.execute(command);
+            } catch (RuntimeException ex) {
+                submittedCount.decrementAndGet();
+                throw ex;
+            }
+        }
+
         @Override
         protected void afterExecute(Runnable runnable, Throwable throwable) {
             super.afterExecute(runnable, throwable);
+            submittedCount.decrementAndGet();
             if (throwable != null) {
                 report("An async script continuation ended with an error", throwable);
             }
@@ -227,23 +256,23 @@ public final class TaskExecutor {
 
         private static final long serialVersionUID = 1L;
 
-        private transient volatile ThreadPoolExecutor executor;
+        private transient volatile AsyncPool executor;
 
         ScalingQueue(int capacity) {
             super(capacity);
         }
 
-        void setExecutor(ThreadPoolExecutor executor) {
+        void setExecutor(AsyncPool executor) {
             this.executor = executor;
         }
 
         @Override
         public boolean offer(Runnable runnable) {
-            ThreadPoolExecutor executor = this.executor;
+            AsyncPool executor = this.executor;
             if (executor != null) {
                 int poolSize = executor.getPoolSize();
-                if (poolSize < executor.getMaximumPoolSize() && executor.getActiveCount() >= poolSize) {
-                    return false; // let the pool start another worker
+                if (poolSize < executor.getMaximumPoolSize() && executor.getSubmittedCount() > poolSize) {
+                    return false; // every worker is busy: let the pool start another one
                 }
             }
             return super.offer(runnable);
@@ -258,7 +287,7 @@ public final class TaskExecutor {
     /**
      * Handles what {@link ScalingQueue} refused but the pool could not take either: normally that
      * means growing lost a race, in which case the task simply belongs in the queue. Only when the
-     * queue is genuinely full is the task run on the calling thread, slowing the producer down.
+     * queue is genuinely full does the task run outside the pool, slowing the producer down.
      */
     private static final class Backpressure implements RejectedExecutionHandler {
 
@@ -270,7 +299,17 @@ public final class TaskExecutor {
             if (executor.getQueue() instanceof ScalingQueue queue && queue.enqueue(runnable)) {
                 return;
             }
-            runnable.run();
+            if (executor instanceof AsyncPool pool) {
+                pool.taskRejected();
+            }
+            // Script continuations block in YAML/database/network calls, so running one inline is
+            // only acceptable off the main thread; on it, a blocked continuation would stall the
+            // entire server. The Bukkit async scheduler is the escape valve for that case.
+            if (Bukkit.isPrimaryThread()) {
+                Bukkit.getScheduler().runTaskAsynchronously(MundoSKAsync.getInstance(), runnable);
+            } else {
+                runnable.run();
+            }
         }
     }
 
