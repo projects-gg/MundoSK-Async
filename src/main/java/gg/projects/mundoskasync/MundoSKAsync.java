@@ -22,6 +22,7 @@ public class MundoSKAsync extends JavaPlugin {
     public void onEnable() {
         instance = this;
         TaskExecutor.start();
+        SyncPump.start();
         addonInstance = Skript.registerAddon(this);
         try {
             addonInstance.loadClasses("gg.projects.mundoskasync");
@@ -32,6 +33,7 @@ public class MundoSKAsync extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        SyncPump.stop();
         getServer().getScheduler().cancelTasks(this);
         TaskExecutor.shutdown();
         addonInstance = null;

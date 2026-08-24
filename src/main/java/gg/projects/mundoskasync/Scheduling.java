@@ -26,8 +26,12 @@ public final class Scheduling {
     /** One Minecraft tick in milliseconds, used to convert tick delays for the async scheduler. */
     private static final long MILLIS_PER_TICK = 50L;
 
+    // Routed through SyncPump rather than runTask: a zero-delay Bukkit task submitted while the
+    // scheduler heartbeat is still draining runs in the SAME tick, which lets wall-clock-paced
+    // async producers extend a tick indefinitely (watchdog death). The pump runs continuations
+    // in order under a per-tick budget instead.
     public static void sync(Runnable runnable) {
-        Bukkit.getScheduler().runTask(MundoSKAsync.getInstance(), requireRunnable(runnable));
+        SyncPump.submit(requireRunnable(runnable));
     }
 
     // Async work is dispatched through the plugin's own bounded pool instead of

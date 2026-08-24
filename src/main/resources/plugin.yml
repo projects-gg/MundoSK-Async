@@ -1,6 +1,6 @@
 name: MundoSK-Async
 main: gg.projects.mundoskasync.MundoSKAsync
 authors: [Tlatoani, TPGamesNL, NanoDn, rudde]
-version: 0.1.5
+version: 0.1.7
 api-version: '1.21'
 depend: [Skript]
